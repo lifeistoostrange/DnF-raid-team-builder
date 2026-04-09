@@ -16,13 +16,38 @@
             align-items: center;
             padding: 40px 20px;
         }
-        h1 { font-size: 28px; margin-bottom: 30px; color: #e94560; }
+        h1 { font-size: 28px; margin-bottom: 24px; color: #e94560; }
+
+        /* 탭 */
+        .tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #0f3460;
+            width: 100%;
+            max-width: 800px;
+        }
+        .tab-btn {
+            padding: 10px 24px;
+            background: none;
+            border: none;
+            color: #aaa;
+            font-size: 15px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+        }
+        .tab-btn:hover { color: #eee; }
+        .tab-btn.active { color: #e94560; border-bottom-color: #e94560; font-weight: bold; }
+        .tab-content { display: none; width: 100%; max-width: 800px; }
+        .tab-content.active { display: block; }
+
+        /* 검색 */
         .search-box {
             display: flex;
             gap: 10px;
             margin-bottom: 30px;
             width: 100%;
-            max-width: 500px;
         }
         input {
             flex: 1;
@@ -45,7 +70,8 @@
             font-size: 16px;
         }
         button:hover { background: #c73652; }
-        #result { width: 100%; max-width: 800px; }
+
+        /* 캐릭터 카드 */
         .character {
             background: #16213e;
             border-radius: 10px;
@@ -55,9 +81,10 @@
             justify-content: space-between;
             align-items: center;
             border-left: 4px solid #e94560;
+            gap: 12px;
         }
         .character.buffer { border-left-color: #4ecca3; }
-        .char-info { display: flex; flex-direction: column; gap: 4px; }
+        .char-info { display: flex; flex-direction: column; gap: 4px; flex: 1; }
         .char-name { font-size: 18px; font-weight: bold; }
         .char-job { font-size: 13px; color: #aaa; }
         .char-adven { font-size: 12px; color: #888; }
@@ -68,22 +95,238 @@
         .error { color: #e94560; font-size: 16px; margin-top: 20px; }
         .loading { color: #aaa; margin-top: 20px; }
         .count { margin-bottom: 16px; color: #aaa; font-size: 14px; }
+
+        /* 저장된 캐릭터 목록 */
+        .section-title {
+            font-size: 18px;
+            color: #aaa;
+            margin-bottom: 12px;
+            border-bottom: 1px solid #0f3460;
+            padding-bottom: 8px;
+        }
+        .adven-group { margin-bottom: 10px; }
+        .adven-header {
+            background: #0f3460;
+            padding: 12px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+        .adven-header:hover { background: #1a4a80; }
+        .adven-header-name { font-size: 16px; font-weight: bold; }
+        .adven-header-count { font-size: 13px; color: #aaa; }
+        .adven-arrow { font-size: 12px; color: #aaa; transition: transform 0.2s; }
+        .adven-arrow.open { transform: rotate(180deg); }
+        .adven-body { display: none; padding: 4px 0 0 0; }
+        .adven-body.open { display: block; }
+        .char-img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 6px;
+            flex-shrink: 0;
+        }
+
+        /* 설정 탭 */
+        .settings-form { display: flex; flex-direction: column; gap: 16px; }
+        .setting-row {
+            background: #16213e;
+            border-radius: 10px;
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+        }
+        .setting-label { display: flex; flex-direction: column; gap: 4px; }
+        .setting-label span { font-size: 16px; font-weight: bold; }
+        .setting-label small { font-size: 12px; color: #aaa; }
+        .setting-input {
+            width: 140px;
+            flex-shrink: 0;
+            padding: 10px 14px;
+            text-align: right;
+            font-size: 16px;
+        }
+        .save-btn { margin-top: 8px; width: 100%; padding: 14px; font-size: 16px; }
+        .save-msg { text-align: center; margin-top: 10px; font-size: 14px; color: #4ecca3; min-height: 20px; }
     </style>
 </head>
 <body>
     <h1>⚔ 공격대 구성기</h1>
 
-    <div class="search-box">
-        <input type="text" id="advenInput" placeholder="모험단명을 입력하세요" />
-        <button onclick="search()">검색</button>
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('search')">검색</button>
+        <button class="tab-btn" onclick="switchTab('saved')">저장된 캐릭터</button>
+        <button class="tab-btn" onclick="switchTab('settings')">설정</button>
     </div>
 
-    <div id="result"></div>
+    <!-- 검색 탭 -->
+    <div id="tab-search" class="tab-content active">
+        <div class="search-box">
+            <input type="text" id="advenInput" placeholder="모험단명을 입력하세요" />
+            <button onclick="search()">검색</button>
+        </div>
+        <div id="result"></div>
+    </div>
+
+    <!-- 저장된 캐릭터 탭 -->
+    <div id="tab-saved" class="tab-content">
+        <div id="savedList"></div>
+    </div>
+
+    <!-- 설정 탭 -->
+    <div id="tab-settings" class="tab-content">
+        <div class="settings-form">
+            <div class="setting-row">
+                <div class="setting-label">
+                    <span>명성컷</span>
+                    <small>이 수치 미만 캐릭터는 제외</small>
+                </div>
+                <input type="number" id="set-min_fame" class="setting-input" />
+            </div>
+            <div class="setting-row">
+                <div class="setting-label">
+                    <span>딜러컷</span>
+                    <small>억 단위 입력 (예: 300 → 300억)</small>
+                </div>
+                <input type="number" id="set-dealer_cut" class="setting-input" />
+            </div>
+            <div class="setting-row">
+                <div class="setting-label">
+                    <span>버퍼컷</span>
+                    <small>만 단위 입력 (예: 400 → 400만)</small>
+                </div>
+                <input type="number" id="set-buffer_cut" class="setting-input" />
+            </div>
+            <div class="setting-row">
+                <div class="setting-label">
+                    <span>파티컷 기준 딜합</span>
+                    <small>억 단위 입력 (예: 1500 → 1500억)</small>
+                </div>
+                <input type="number" id="set-clear_dps" class="setting-input" />
+            </div>
+            <div class="setting-row">
+                <div class="setting-label">
+                    <span>파티컷 기준 버프력</span>
+                    <small>만 단위 입력 (예: 680 → 680만)</small>
+                </div>
+                <input type="number" id="set-clear_buff" class="setting-input" />
+            </div>
+            <button class="save-btn" onclick="saveSettings()">저장</button>
+            <div class="save-msg" id="save-msg"></div>
+        </div>
+    </div>
 
     <script>
         document.getElementById("advenInput").addEventListener("keydown", function(e) {
             if (e.key === "Enter") search();
         });
+
+        const TAB_NAMES = ["search", "saved", "settings"];
+
+        function switchTab(name) {
+            document.querySelectorAll(".tab-btn").forEach((btn, i) => {
+                btn.classList.toggle("active", TAB_NAMES[i] === name);
+            });
+            document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
+            document.getElementById("tab-" + name).classList.add("active");
+
+            if (name === "saved") loadSaved();
+            if (name === "settings") loadSettings();
+        }
+
+        async function loadSettings() {
+            const res = await fetch("/settings");
+            const data = await res.json();
+            for (const [key, val] of Object.entries(data)) {
+                const el = document.getElementById("set-" + key);
+                if (el) el.value = val;
+            }
+        }
+
+        async function saveSettings() {
+            const keys = ["min_fame", "dealer_cut", "buffer_cut", "clear_dps", "clear_buff"];
+            const data = {};
+            for (const key of keys) {
+                data[key] = parseFloat(document.getElementById("set-" + key).value);
+            }
+            await fetch("/settings", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data)
+            });
+            const msg = document.getElementById("save-msg");
+            msg.textContent = "저장됐습니다.";
+            setTimeout(() => msg.textContent = "", 2000);
+        }
+
+        async function loadSaved() {
+            const container = document.getElementById("savedList");
+            container.innerHTML = '<p class="loading">불러오는 중...</p>';
+
+            const res = await fetch("/characters");
+            const grouped = await res.json();
+
+            const advenNames = Object.keys(grouped);
+            if (advenNames.length === 0) {
+                container.innerHTML = '<p class="loading">저장된 캐릭터가 없습니다.</p>';
+                return;
+            }
+
+            let html = `<p class="section-title">저장된 모험단 (${advenNames.length}개)</p>`;
+
+            advenNames.forEach(adven => {
+                const chars = grouped[adven];
+                html += `
+                    <div class="adven-group">
+                        <div class="adven-header" onclick="toggleAdven(this)">
+                            <span class="adven-header-name">${adven}</span>
+                            <span>
+                                <span class="adven-header-count">${chars.length}캐릭터</span>
+                                <span class="adven-arrow">▼</span>
+                            </span>
+                        </div>
+                        <div class="adven-body">
+                `;
+                chars.forEach(c => {
+                    const isBuffer = !!c.buff_score;
+                    const statLabel = isBuffer ? "버프력" : "딜";
+                    const statValue = isBuffer
+                        ? c.buff_score.toLocaleString()
+                        : (c.dundam_dps ? (c.dundam_dps / 100000000).toFixed(0) + "억" : "정보없음");
+                    const imgUrl = c.key && c.server
+                        ? `https://img-api.neople.co.kr/df/servers/${c.server}/characters/${c.key}?zoom=1`
+                        : '';
+                    html += `
+                        <div class="character ${isBuffer ? 'buffer' : ''}">
+                            ${imgUrl ? `<img src="${imgUrl}" alt="${c.name}" class="char-img" onerror="this.style.display='none'">` : ''}
+                            <div class="char-info">
+                                <span class="char-name">${c.name}</span>
+                                <span class="char-job">${c.job}</span>
+                            </div>
+                            <div class="char-stats">
+                                <div class="stat-main">${statLabel}: ${statValue}</div>
+                                <div class="stat-sub">명성: ${c.fame ? c.fame.toLocaleString() : '-'}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += `</div></div>`;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function toggleAdven(header) {
+            const body = header.nextElementSibling;
+            const arrow = header.querySelector(".adven-arrow");
+            body.classList.toggle("open");
+            arrow.classList.toggle("open");
+        }
 
         async function search() {
             const adven = document.getElementById("advenInput").value.trim();

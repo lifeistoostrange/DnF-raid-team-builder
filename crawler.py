@@ -2,6 +2,7 @@ import requests
 import sqlite3
 import os
 import re
+from urllib.parse import quote
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "characters.db")
 
@@ -26,6 +27,22 @@ def init_db():
             set_name    TEXT
         )
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS settings (
+            key     TEXT PRIMARY KEY,
+            value   REAL
+        )
+    """)
+    # 기본값 (없을 때만 삽입)
+    defaults = {
+        "min_fame":    63257,  # 명성컷
+        "dealer_cut":  300,    # 딜러컷 (억 단위)
+        "buffer_cut":  400,    # 버퍼컷 (만 단위)
+        "clear_dps":   1500,   # 딜합컷 딜량 (억 단위)
+        "clear_buff":  680,    # 딜합컷 버프력 (만 단위)
+    }
+    for k, v in defaults.items():
+        cursor.execute("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", (k, v))
     conn.commit()
     conn.close()
 
@@ -62,7 +79,7 @@ def fetch_characters(adven_name):
     }
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
-        "Referer": "https://dundam.xyz/search?server=adven&name=" + adven_name,
+        "Referer": "https://dundam.xyz/search?server=adven&name=" + quote(adven_name),
         "Origin": "https://dundam.xyz",
         "Accept": "application/json, text/plain, */*",
         "Content-Type": "application/json"
