@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, jsonify
 from crawler import fetch_characters, save_characters, init_db
 
 app = Flask(__name__)
+init_db()
 
 @app.route("/")
 def index():
