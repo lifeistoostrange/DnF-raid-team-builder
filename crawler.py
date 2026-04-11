@@ -24,14 +24,59 @@ def init_db():
             dundam_dps  INTEGER,
             buff_score  INTEGER,
             cri         REAL,
-            set_name    TEXT
+            set_name    TEXT,
+            active      INTEGER DEFAULT 1
         )
     """)
+    # 기존 DB에 active 컬럼이 없으면 추가
+    try:
+        cursor.execute("ALTER TABLE characters ADD COLUMN active INTEGER DEFAULT 1")
+    except sqlite3.OperationalError:
+        pass
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS settings (
             key     TEXT PRIMARY KEY,
             value   REAL
         )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS raid_roster (
+            id       INTEGER PRIMARY KEY AUTOINCREMENT,
+            run_num  INTEGER DEFAULT 1,
+            char_key TEXT,
+            name     TEXT,
+            job      TEXT,
+            role     TEXT,
+            combat   INTEGER,
+            party    TEXT
+        )
+    """)
+    try:
+        cursor.execute("ALTER TABLE raid_roster ADD COLUMN run_num INTEGER DEFAULT 1")
+    except sqlite3.OperationalError:
+        pass
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS adventurers (
+            adven_name  TEXT PRIMARY KEY,
+            nickname    TEXT DEFAULT '',
+            active      INTEGER DEFAULT 1
+        )
+    """)
+    try:
+        cursor.execute("ALTER TABLE adventurers ADD COLUMN active INTEGER DEFAULT 1")
+    except sqlite3.OperationalError:
+        pass
+    # 단위 마이그레이션 (최초 1회)
+    cursor.execute("SELECT value FROM settings WHERE key = 'units_migrated'")
+    if not cursor.fetchone():
+        cursor.execute("UPDATE characters SET dundam_dps = dundam_dps / 100000000 WHERE dundam_dps IS NOT NULL")
+        cursor.execute("UPDATE characters SET buff_score  = buff_score  / 10000      WHERE buff_score  IS NOT NULL")
+        cursor.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('units_migrated', 1)")
+
+    # 기존 characters에서 모험단명 자동 동기화
+    cursor.execute("""
+        INSERT OR IGNORE INTO adventurers (adven_name)
+        SELECT DISTINCT adven_name FROM characters WHERE adven_name IS NOT NULL
     """)
     # 기본값 (없을 때만 삽입)
     defaults = {
@@ -40,6 +85,7 @@ def init_db():
         "buffer_cut":  400,    # 버퍼컷 (만 단위)
         "clear_dps":   1500,   # 딜합컷 딜량 (억 단위)
         "clear_buff":  680,    # 딜합컷 버프력 (만 단위)
+        "raid_count":  4,      # 레이드 횟수
     }
     for k, v in defaults.items():
         cursor.execute("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", (k, v))
@@ -50,23 +96,23 @@ def init_db():
 # 숫자 변환 함수
 # ─────────────────────────────────────────
 def parse_dps(text):
-    # "4115 억 4065 만" → 411540650000
+    # "4115 억 4065 만" → 4115 (억 단위 정수)
     if not text:
         return None
     uk = re.search(r"([\d,]+)\s*억", text)
     man = re.search(r"([\d,]+)\s*만", text)
     result = 0
     if uk:
-        result += int(uk.group(1).replace(",", "")) * 100_000_000
+        result += int(uk.group(1).replace(",", ""))
     if man:
-        result += int(man.group(1).replace(",", "")) * 10_000
-    return result if result > 0 else None
+        result += int(man.group(1).replace(",", "")) / 10000
+    return int(result) if result > 0 else None
 
 def parse_buff(text):
-    # "5,741,184" → 5741184
+    # "5,741,184" → 574 (만 단위 정수)
     if not text:
         return None
-    return int(text.replace(",", ""))
+    return int(text.replace(",", "")) // 10_000
 
 # ─────────────────────────────────────────
 # 던담 API 호출
@@ -119,6 +165,11 @@ def save_characters(characters):
             c.get("cri"),
             c.get("setname")
         ))
+
+    # 모험단 자동 등록 (닉네임은 건드리지 않음)
+    adven_names = {c.get("adventrueName") for c in characters if c.get("adventrueName")}
+    for adven in adven_names:
+        cursor.execute("INSERT OR IGNORE INTO adventurers (adven_name) VALUES (?)", (adven,))
 
     conn.commit()
     conn.close()
